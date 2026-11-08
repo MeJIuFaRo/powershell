@@ -5,6 +5,7 @@
 | Модуль | Что делает |
 |---|---|
 | [Convert-PFX](Convert-PFX/README.md) | Разбирает PFX на сертификат и ключ или собирает PFX из сертификата и ключа (через OpenSSL) |
+| [New-BitsTransfer](New-BitsTransfer/README.md) | Копирует и скачивает файлы через BITS с прогрессом, скоростью и защитой от зависаний |
 | [Remove-SSHKey](Remove-SSHKey/README.md) | Удаляет ключ хоста из `known_hosts` по имени хоста или по номеру строки |
 
 ## Установка
@@ -18,7 +19,7 @@
 
 ```powershell
 git clone https://github.com/MeJIuFaRo/powershell.git
-Copy-Item .\powershell\Convert-PFX, .\powershell\Remove-SSHKey "$HOME\Documents\PowerShell\Modules" -Recurse
+Copy-Item .\powershell\Convert-PFX, .\powershell\New-BitsTransfer, .\powershell\Remove-SSHKey "$HOME\Documents\PowerShell\Modules" -Recurse
 ```
 
 После этого модуль подгрузится сам при первом вызове команды. В уже открытой сессии:
@@ -31,5 +32,6 @@ Import-Module Convert-PFX -Force
 
 ```powershell
 Get-Help Convert-PFX -Full
+Get-Help New-BitsTransfer -Examples
 Get-Help Remove-SSHKey -Examples
 ```
