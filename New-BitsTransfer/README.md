@@ -25,8 +25,12 @@ New-BitsTransfer (Get-ChildItem \\srv\share\*.vhdx).FullName D:\VM\
 # Подпись задачи и низкий приоритет (не мешает другому трафику)
 New-BitsTransfer \\srv\share\backup.zip D:\Backup\ 'Ночной бэкап' -Priority Low
 
-# С учётными данными
+# С учётными данными для HTTP/HTTPS-сервера
 New-BitsTransfer https://intranet/report.xlsx .\report.xlsx -Credential (Get-Credential)
+
+# Общая папка под другой учётной записью: сначала подключить её, потом копировать
+net use \\srv\share /user:DOMAIN\user
+New-BitsTransfer \\srv\share\big.iso D:\ISO\
 ```
 
 ## Параметры
@@ -38,7 +42,7 @@ New-BitsTransfer https://intranet/report.xlsx .\report.xlsx -Credential (Get-Cre
 | `Name` (позиция 2) | Подпись задачи в BITS (видно в `Get-BitsTransfer`). По умолчанию `New-BitsTransfer` |
 | `Priority` | `Foreground` (по умолчанию), `High`, `Normal`, `Low` |
 | `RetryTimeoutSec` | Сколько секунд ждать при временной ошибке (сервер недоступен, обрыв сети). `0` — ждать бесконечно. По умолчанию `46800` (13 часов) |
-| `Credential` | Учётные данные для источника (HTTP-аутентификация или общая папка) |
+| `Credential` | Учётные данные для HTTP/HTTPS-сервера в `Source`. Для локальных и UNC-путей **не действуют** (см. ниже) |
 
 ## Результат
 
@@ -62,6 +66,22 @@ New-BitsTransfer https://intranet/report.xlsx .\report.xlsx -Credential (Get-Cre
 - **Локальные и UNC-источники** проверяются до запуска, поэтому ошибка «Источник не найден» понятна сразу.
 - **Несколько источников:** путь назначения для каждого файла собирается из папки и имени файла.
 - **При ошибке или Ctrl+C** BITS-задача отменяется, а BITS удаляет свои временные файлы `BIT*.tmp`.
+
+## Общие папки и учётные данные
+
+`-Credential` для UNC-путей (`\\сервер\шара`) не работает: `Start-BitsTransfer` проверяет такой путь от имени текущего пользователя ещё до запуска BITS. Если доступа нет, команда сразу выдаёт «Источник не найден», а если доступ есть, переданные учётные данные просто игнорируются. При `-Credential` с локальным или UNC-источником функция выводит предупреждение.
+
+Доступ к общей папке под другой учётной записью задайте заранее:
+
+```powershell
+# Навсегда (пароль будет запрошен, хранится в диспетчере учётных данных Windows)
+cmdkey /add:srv.domain.local /user:DOMAIN\user /pass
+
+# Только на текущий сеанс входа
+net use \\srv.domain.local\share /user:DOMAIN\user
+```
+
+После этого `New-BitsTransfer` работает с этой папкой без `-Credential`.
 
 ## Если закрыть окно терминала
 

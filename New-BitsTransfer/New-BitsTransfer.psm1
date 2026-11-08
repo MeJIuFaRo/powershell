@@ -19,7 +19,10 @@
     Сколько секунд ждать при временной ошибке (сервер недоступен, обрыв сети), прежде чем сдаться.
     0 — ждать бесконечно. По умолчанию 46800 (13 часов).
   .PARAMETER Credential
-    Учётные данные для источника (HTTP-аутентификация или общая папка).
+    Учётные данные для HTTP/HTTPS-сервера в -Source.
+    Для локальных и UNC-путей не действуют: Start-BitsTransfer проверяет такой путь
+    от имени текущего пользователя. Доступ к общей папке задайте заранее:
+    cmdkey /add:<сервер> /user:<домен\пользователь> /pass  или  net use \\<сервер>\<шара> /user:<...>.
   .EXAMPLE
     New-BitsTransfer \\srv\share\big.iso D:\ISO\
   .EXAMPLE
@@ -53,10 +56,15 @@
     else { '{0:N0} КБ' -f ($Bytes / 1KB) }
   }
 
+  if ($Credential -and @($Source | Where-Object { $_ -notmatch '^https?://' }).Count) {
+    Write-Warning '-Credential действует только для HTTP/HTTPS-источников. Локальные и UNC-пути копируются от имени текущего пользователя; доступ к общей папке задайте через cmdkey или net use.'
+  }
+
   # Локальные и UNC-источники проверяем заранее, чтобы ошибка была понятной.
   foreach ($s in $Source) {
     if ($s -notmatch '^https?://' -and -not (Test-Path -LiteralPath $s -PathType Leaf)) {
-      Write-Error "Источник не найден: $s"; return
+      $hint = if ($s -like '\\*') { ' Для общей папки это может быть и отказ в доступе: задайте учётные данные через cmdkey или net use.' } else { '' }
+      Write-Error "Источник не найден: $s.$hint"; return
     }
   }
 
