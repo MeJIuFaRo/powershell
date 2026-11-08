@@ -17,7 +17,7 @@
     Приоритет BITS: Foreground (по умолчанию), High, Normal, Low.
   .PARAMETER RetryTimeoutSec
     Сколько секунд ждать при временной ошибке (сервер недоступен, обрыв сети), прежде чем сдаться.
-    0 — ждать бесконечно. По умолчанию 60.
+    0 — ждать бесконечно. По умолчанию 46800 (13 часов).
   .PARAMETER Credential
     Учётные данные для источника (HTTP-аутентификация или общая папка).
   .EXAMPLE
@@ -42,7 +42,7 @@
     [string]$Priority = 'Foreground',
 
     [ValidateRange(0, [int]::MaxValue)]
-    [int]$RetryTimeoutSec = 60,
+    [int]$RetryTimeoutSec = 46800,
 
     [pscredential]$Credential
   )
@@ -102,7 +102,9 @@
           if (-not $transientSince) { $transientSince = Get-Date }
           $waited = ((Get-Date) - $transientSince).TotalSeconds
           if ($RetryTimeoutSec -gt 0 -and $waited -ge $RetryTimeoutSec) {
-            throw "Источник недоступен дольше $RetryTimeoutSec с: $($job.ErrorDescription)".Trim()
+            $limit = [timespan]::FromSeconds($RetryTimeoutSec)
+            $limitText = if ($limit.TotalHours -ge 1) { '{0:N1} ч' -f $limit.TotalHours } elseif ($limit.TotalMinutes -ge 1) { '{0:N0} мин' -f $limit.TotalMinutes } else { "$RetryTimeoutSec с" }
+            throw "Источник недоступен дольше ${limitText}: $($job.ErrorDescription)".Trim()
           }
         }
         'Suspended' { Resume-BitsTransfer -BitsJob $job -Asynchronous | Out-Null }
