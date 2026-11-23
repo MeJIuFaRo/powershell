@@ -3,7 +3,7 @@
   .SYNOPSIS
     Разбирает PFX на .crt + .key или собирает PFX из .crt + .key (через openssl).
   .DESCRIPTION
-    Направление определяется по расширению входного файла:
+    Направление можно указать через -ToPFX или -FromPFX. Без переключателя оно определяется по расширению:
       .pfx / .p12                -> создаются <имя>.crt (сертификаты) и <имя>.key (ключ без пароля);
       .crt / .cer / .pem         -> создаётся <имя>.pfx из сертификата и ключа <имя>.key
                                     (или -KeyPath). Сертификат может быть в PEM или DER.
@@ -16,6 +16,10 @@
     Входной файл: PFX/P12 для разбора или CRT/CER/PEM для сборки.
   .PARAMETER Passwd
     Пароль PFX: SecureString или строка. Если не указан, будет запрошен.
+  .PARAMETER ToPFX
+    Собрать PFX из сертификата и ключа. Параметры сборки: KeyPath, KeyPasswd, ChainPath, FriendlyName, Compat.
+  .PARAMETER FromPFX
+    Разобрать PFX/P12 на сертификаты и ключ. Параметры разбора: Traditional, LeafOnly.
   .PARAMETER KeyPath
     Сборка: путь к закрытому ключу. По умолчанию <имя сертификата>.key рядом с сертификатом.
   .PARAMETER KeyPasswd
@@ -44,8 +48,12 @@
     Собрать site.pfx из site.crt и site.key.
   .EXAMPLE
     Convert-PFX .\fullchain.pem $pw -KeyPath .\privkey.pem -FriendlyName 'site.ru 2026' -Compat
+  .EXAMPLE
+    Convert-PFX -ToPFX .\site.crt -KeyPath .\private.key
+  .EXAMPLE
+    Convert-PFX -FromPFX .\site.pfx -LeafOnly
   #>
-  [CmdletBinding()]
+  [CmdletBinding(DefaultParameterSetName = 'Auto')]
   param(
     [Parameter(Mandatory, Position = 0, ValueFromPipeline, ValueFromPipelineByPropertyName)]
     [Alias('FullName', 'Path')]
@@ -54,15 +62,27 @@
     [Parameter(Position = 1)]
     [object]$Passwd,
 
+    [Parameter(ParameterSetName = 'ToPFX')]
+    [switch]$ToPFX,
+    [Parameter(ParameterSetName = 'ToPFX')]
     [string]$KeyPath,
+    [Parameter(ParameterSetName = 'ToPFX')]
     [object]$KeyPasswd,
+    [Parameter(ParameterSetName = 'ToPFX')]
     [string]$ChainPath,
+    [Parameter(ParameterSetName = 'ToPFX')]
     [string]$FriendlyName,
+    [Parameter(ParameterSetName = 'ToPFX')]
     [switch]$Compat,
 
-    [string]$OutDir,
+    [Parameter(ParameterSetName = 'FromPFX')]
+    [switch]$FromPFX,
+    [Parameter(ParameterSetName = 'FromPFX')]
     [switch]$Traditional,
+    [Parameter(ParameterSetName = 'FromPFX')]
     [switch]$LeafOnly,
+
+    [string]$OutDir,
     [switch]$Force
   )
 
@@ -107,6 +127,12 @@
       default { $null }
     }
     if (-not $mode) { Write-Error "Неизвестное расширение '$ext': ожидается .pfx/.p12 (разбор) или .crt/.cer/.pem (сборка)."; return }
+    if ($PSCmdlet.ParameterSetName -eq 'ToPFX' -and $mode -ne 'build') {
+      Write-Error "Для сборки PFX передайте сертификат .crt, .cer или .pem. Получен файл '$src'."; return
+    }
+    if ($PSCmdlet.ParameterSetName -eq 'FromPFX' -and $mode -ne 'split') {
+      Write-Error "Для разбора PFX передайте файл .pfx или .p12. Получен файл '$src'."; return
+    }
 
     $dir = if ($OutDir) { (Resolve-Path -LiteralPath $OutDir -ErrorAction Stop).ProviderPath } else { Split-Path $src -Parent }
     $base = [IO.Path]::GetFileNameWithoutExtension($src)

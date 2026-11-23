@@ -2,7 +2,7 @@
 
 Разбирает PFX на сертификат и закрытый ключ или собирает PFX из сертификата и ключа. Работает через `openssl`.
 
-Направление выбирается по расширению входного файла:
+Задайте направление переключателем `-ToPFX` для сборки или `-FromPFX` для разбора. Без переключателя функция выбирает режим по расширению входного файла. PowerShell дополняет параметры выбранного режима и отклоняет несовместимые сочетания.
 
 | Вход | Результат |
 |---|---|
@@ -21,13 +21,13 @@
 Convert-PFX .\site.pfx
 
 # Разобрать, ключ в формате BEGIN RSA PRIVATE KEY, в .crt только сертификат сервера
-Convert-PFX .\site.pfx -Traditional -LeafOnly
+Convert-PFX -FromPFX .\site.pfx -Traditional -LeafOnly
 
 # Собрать PFX из site.crt и site.key, пароль будет запрошен дважды
 Convert-PFX .\site.crt
 
 # Собрать из fullchain.pem и privkey.pem (например, Let's Encrypt) с понятным именем
-Convert-PFX .\fullchain.pem -KeyPath .\privkey.pem -FriendlyName 'site.ru 2026'
+Convert-PFX -ToPFX .\fullchain.pem -KeyPath .\privkey.pem -FriendlyName 'site.ru 2026'
 
 # Собрать PFX с промежуточным сертификатом для старого Windows Server
 Convert-PFX .\site.crt -ChainPath .\intermediate.crt -Compat
@@ -40,6 +40,8 @@ Get-ChildItem *.pfx | Convert-PFX -Passwd (Read-Host -AsSecureString) -OutDir .\
 
 | Параметр | Режим | Описание |
 |---|---|---|
+| `ToPFX` | сборка | Собрать `.pfx` из сертификата и закрытого ключа |
+| `FromPFX` | разбор | Извлечь сертификаты и закрытый ключ из `.pfx` или `.p12` |
 | `PathPfx` (позиция 0) | оба | Входной файл. Принимает объекты из `Get-ChildItem` через конвейер |
 | `Passwd` (позиция 1) | оба | Пароль PFX: `SecureString` или строка. Если не указан, запрашивается. Пустая строка — PFX без пароля |
 | `OutDir` | оба | Папка для результата. По умолчанию — папка входного файла |
