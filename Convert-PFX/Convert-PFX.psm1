@@ -12,7 +12,7 @@
     Пустой пароль: PFX без пароля.
     Старые PFX (RC2) при разборе автоматически читаются с -legacy.
     При любой ошибке частично созданные файлы удаляются.
-  .PARAMETER PathPfx
+  .PARAMETER Path
     Входной файл: PFX/P12 для разбора или CRT/CER/PEM для сборки.
   .PARAMETER Passwd
     Пароль PFX: SecureString или строка. Если не указан, будет запрошен.
@@ -49,21 +49,24 @@
   .EXAMPLE
     Convert-PFX .\fullchain.pem $pw -KeyPath .\privkey.pem -FriendlyName 'site.ru 2026' -Compat
   .EXAMPLE
-    Convert-PFX -ToPFX .\site.crt -KeyPath .\private.key
+    Convert-PFX -ToPFX -Path .\site.crt -KeyPath .\private.key
   .EXAMPLE
     Convert-PFX -FromPFX .\site.pfx -LeafOnly
   #>
   [CmdletBinding(DefaultParameterSetName = 'Auto')]
   param(
+    [Parameter(ParameterSetName = 'ToPFX')]
+    [switch]$ToPFX,
+    [Parameter(ParameterSetName = 'FromPFX')]
+    [switch]$FromPFX,
+
     [Parameter(Mandatory, Position = 0, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-    [Alias('FullName', 'Path')]
-    [string]$PathPfx,
+    [Alias('FullName')]
+    [string]$Path,
 
     [Parameter(Position = 1)]
     [object]$Passwd,
 
-    [Parameter(ParameterSetName = 'ToPFX')]
-    [switch]$ToPFX,
     [Parameter(ParameterSetName = 'ToPFX')]
     [string]$KeyPath,
     [Parameter(ParameterSetName = 'ToPFX')]
@@ -75,8 +78,6 @@
     [Parameter(ParameterSetName = 'ToPFX')]
     [switch]$Compat,
 
-    [Parameter(ParameterSetName = 'FromPFX')]
-    [switch]$FromPFX,
     [Parameter(ParameterSetName = 'FromPFX')]
     [switch]$Traditional,
     [Parameter(ParameterSetName = 'FromPFX')]
@@ -119,7 +120,7 @@
   }
 
   process {
-    $src = (Resolve-Path -LiteralPath $PathPfx -ErrorAction Stop).ProviderPath
+    $src = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).ProviderPath
     $ext = [IO.Path]::GetExtension($src).ToLowerInvariant()
     $mode = switch ($ext) {
       { $_ -in '.pfx', '.p12' } { 'split'; break }
